@@ -19,32 +19,32 @@ void set_block_metadata(t_hdr_block *memory_block, t_bool is_free, size_t size)
 
 void *alloc_block(t_zone *zone, size_t size)
 {
-    t_hdr_block *curr_block;
-    t_hdr_block *best_block;
+    t_hdr_block *curr_block_hdr;
+    t_hdr_block *best_block_hdr;
     size_t      leftover_size;
 
-    best_block = NULL;
+    best_block_hdr = NULL;
     for (t_zone *zone_head = zone; zone_head; zone_head = zone_head->next)
     {
-        curr_block = GET_BLOCK_HEAD(zone_head);
-        while ((void*)curr_block - (void*)zone_head < zone->size)
+        curr_block_hdr = GET_ZONE_FIRST_HEADER(zone_head);
+        while ((void*)curr_block_hdr - (void*)zone_head < zone->size)
         {
-            if (curr_block->size + (void *)curr_block - (void *)zone_head > zone->size)
+            if (curr_block_hdr->size + (void *)curr_block_hdr - (void *)zone_head > zone->size)
                 break;
-            if (curr_block->is_free && size <= curr_block->size && (!best_block || curr_block->size < best_block->size))
-                best_block = curr_block;
-            curr_block = GET_NEXT_HEADER(curr_block, curr_block->size);
+            if (curr_block_hdr->is_free && size <= curr_block_hdr->size && (!best_block_hdr || curr_block_hdr->size < best_block_hdr->size))
+                best_block_hdr = curr_block_hdr;
+            curr_block_hdr = GET_NEXT_HEADER(curr_block_hdr, curr_block_hdr->size);
         }
     }
-    if (best_block)
+    if (best_block_hdr)
     {
-        leftover_size = best_block->size - size;
+        leftover_size = best_block_hdr->size - size;
         if (leftover_size > METADATA_SIZE)
-            set_block_metadata(GET_NEXT_HEADER(best_block, size), true, leftover_size - sizeof(t_hdr_block));
-        set_block_metadata(best_block, false, size);
-        return (GET_MEMORY_BLOCK(best_block));
+            set_block_metadata(GET_NEXT_HEADER(best_block_hdr, size), true, leftover_size - sizeof(t_hdr_block));
+        set_block_metadata(best_block_hdr, false, size);
+        return (GET_MEMORY_BLOCK(best_block_hdr));
     }
-    ft_zone_init(GET_SIZE_TYPE(size));
+    ft_zone_init(size);
     return (alloc_block(zone, size));
 }
 
@@ -83,7 +83,7 @@ t_bool ft_zone_init(size_t size)
         if (alloc_memory_page(&g_zones.small, &g_zones.small_tail, SMALL_ZONE_SIZE))
             return (false);
     }
-    set_block_metadata(GET_BLOCK_HEAD(GET_RIGHT_TAIL(size)), true, FIRST_BLOCK_SIZE(size));
+    set_block_metadata(GET_ZONE_FIRST_HEADER(GET_RIGHT_TAIL(size)), true, FIRST_BLOCK_SIZE(size));
     return ((IS_TINY(size) && g_zones.tiny != NULL) || (IS_SMALL(size) && g_zones.small != NULL));
 }
 
@@ -97,10 +97,8 @@ t_hdr_block *search_in_zone(void *ptr, t_zone_type zone_type)
     zone_size = (zone_type == TINY_ZONE) ? TINY_ZONE_SIZE : SMALL_ZONE_SIZE;
     for (t_zone *zone_head = zone; zone_head; zone_head = zone_head->next)
     {
-        curr_block = GET_BLOCK_HEAD(zone_head);
-        if (!((void *)zone_head < ptr && ptr < (void *)zone_head + zone->size))
-            continue;
-        while ((void*)curr_block - (void*)zone_head < zone_size)
+        curr_block = GET_ZONE_FIRST_HEADER(zone_head);
+        while (IS_VALID_ZONE_ADDR(zone_head, curr_block))
         {
             if(GET_MEMORY_BLOCK(curr_block) == ptr)
                 return (curr_block);
@@ -161,19 +159,31 @@ void *ft_malloc(size_t size)
 
 void log_zone(t_zone *zone)
 {
-    t_hdr_block *curr_block;
+    t_hdr_block *block_hdr;
 
     for (t_zone *zone_head = zone; zone_head; zone_head = zone_head->next)
     {
         printf("Zone: %p, size: %zu\n", zone_head, zone_head->size);
-        curr_block = GET_BLOCK_HEAD(zone_head);
-        while ((void *)curr_block < (void *)zone + zone->size)
+        block_hdr = GET_ZONE_FIRST_HEADER(zone_head);
+        while (IS_VALID_ZONE_ADDR(zone_head, block_hdr))
         {
-            printf("Block: %p, size: %d, is_free: %d\n", curr_block, curr_block->size, curr_block->is_free);
-            curr_block = GET_NEXT_HEADER(curr_block, curr_block->size);
+            printf("Block: %p, size: %d, is_free: %d\n", block_hdr, block_hdr->size, block_hdr->is_free);
+            block_hdr = GET_NEXT_HEADER(block_hdr, block_hdr->size);
         }
     }
 }
+
+void    *ft_realloc(void *ptr, size_t size)
+{
+    t_hdr_block *block_header;
+
+    block_header = GET_BLOCK_HEADER(ptr);
+    // need check if the pointer is valid
+    if (get_alligned_size(size) == block_header->size)
+        return (ptr);
+    // 
+}
+
 #include <string.h>
 
 int main()
@@ -182,12 +192,13 @@ int main()
     // char *nejma = ft_malloc(10);
     // char *nejma2 = ft_malloc(10);
     char *nejma3 = ft_malloc(10);
-    // memset(nejma3, 'a', 30);g
+    memset(nejma3, 'a', 30);
     char *nejma4 = ft_malloc(10);
     // char *nejma3 = ft_malloc(40);
     // char *nejma4 = ft_malloc(40);
     // char *nejma5 = ft_malloc(3000);
     log_zone(g_zones.tiny);
+    // printf("%p", nejma4);
     // ft_free(nejma);
     // printf("------------------\n");
     // log_zone(g_zones.tiny);
@@ -213,7 +224,7 @@ int main()
     // printf("%p\n", nejma5);
 
 
-    // printf("%p, %d\n", GET_BLOCK_HEAD(g_zones.tiny), GET_BLOCK_HEAD(g_zones.tiny)->size);
+    // printf("%p, %d\n", GET_ZONE_FIRST_HEADER(g_zones.tiny), GET_ZONE_FIRST_HEADER(g_zones.tiny)->size);
     // printf("%c\n", *nejma);
-    // printf("%p, %d\n", GET_BLOCK_FOOTER(GET_BLOCK_HEAD(g_zones.tiny)),  *GET_BLOCK_FOOTER(GET_BLOCK_HEAD(g_zones.tiny)));
+    // printf("%p, %d\n", GET_BLOCK_FOOTER(GET_ZONE_FIRST_HEADER(g_zones.tiny)),  *GET_BLOCK_FOOTER(GET_ZONE_FIRST_HEADER(g_zones.tiny)));
 }

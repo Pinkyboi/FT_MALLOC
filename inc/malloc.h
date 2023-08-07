@@ -26,20 +26,23 @@
 #define ZONE_SIZE(size) (IS_TINY(size) ? TINY_ZONE_SIZE : SMALL_ZONE_SIZE)
 #define FIRST_BLOCK_SIZE(size) (ZONE_SIZE(size) - sizeof(t_zone) - METADATA_SIZE)
 
-#define GET_SIZE_TYPE(size) (IS_TINY(size) ? TINY_SIZE : IS_SMALL(size) ? SMALL_SIZE : size)
-#define GET_ZONE_TYPE(size, zones) (IS_TINY(size) ? zones.tiny : zones.large)
+#define GET_RIGHT_ZONE(size) (IS_TINY(size) ? g_zones.tiny : IS_SMALL(g_zones.small) ? g_zones.small : g_zones.large)
+// #define GET_RIGHT_ZONE(size, zone_type) (zone_type == TINY_ZONE ? g_zones.tiny : zone_type == SMALL_ZONE ? g_zones.small : g_zones.large)
 
-#define GET_RIGHT_ZONE(size) (IS_TINY(size) ? g_zones.tiny : g_zones.large)
 #define GET_RIGHT_TAIL(size) (IS_TINY(size) ? g_zones.tiny_tail : g_zones.small_tail)
 
 #define ZONES_NOT_ALLOCATED(zones) (!zones.tiny && !zones.small)
 
-#define GET_BLOCK_HEAD(zone) ((t_hdr_block *)((void *)zone + sizeof(t_zone) + sizeof(t_hdr_block)))
-#define GET_MEMORY_BLOCK(block) ((void *)block + sizeof(t_hdr_block))
+#define GET_ZONE_FIRST_HEADER(zone) ((t_hdr_block *)((void *)zone + sizeof(t_zone) + sizeof(t_hdr_block)))
+
+#define GET_BLOCK_HEADER(block) ((void *)block - sizeof(t_hdr_block))
+#define GET_MEMORY_BLOCK(hdr) ((void *)hdr + sizeof(t_hdr_block))
 #define GET_L_MEMORY_BLOCK(zone) ((void *)zone + sizeof(t_zone))
-#define GET_BLOCK_FOOTER(block) ((t_ftr_block *)((void *)block + block->size - sizeof(t_ftr_block)))
-#define GET_NEXT_HEADER(block, size) ((t_hdr_block *)((void *)block + sizeof(t_hdr_block) + size))
-#define GET_PREV_HEADER(block) ((t_hdr_block *)((void *)block - *((t_ftr_block *)((void *)block - sizeof(t_ftr_block))) - sizeof(t_hdr_block)))
+#define GET_BLOCK_FOOTER(hdr) ((t_ftr_block *)((void *)hdr + hdr->size + sizeof(t_hdr_block) - sizeof(t_ftr_block)))
+#define GET_NEXT_HEADER(hdr, size) ((t_hdr_block *)((void *)hdr + sizeof(t_hdr_block) + size))
+#define GET_PREV_HEADER(hdr) ((t_hdr_block *)((void *)hdr - *((t_ftr_block *)((void *)hdr - sizeof(t_ftr_block))) - sizeof(t_hdr_block)))
+
+#define IS_VALID_ZONE_ADDR(zone, addr) ((void *)zone < (void *)addr && (void *)addr < (void *)zone + zone->size)
 
 #if __WORDSIZE == 32
     #define ALLIGN(x) (((((x) - 1) >> 2) << 2) + 4)
