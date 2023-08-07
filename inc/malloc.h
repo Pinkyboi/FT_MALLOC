@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <pthread.h>
+#include <math.h>
 
 #define TINY_SIZE 128
 #define SMALL_SIZE 1024
@@ -19,8 +20,8 @@
 #define LARGE_BLOCK_SIZE(x) (x + sizeof(t_zone))
 
 #define METADATA_SIZE (sizeof(t_hdr_block) + sizeof(t_ftr_block))
-#define TINY_ZONE_SIZE  (100 * (TINY_SIZE + METADATA_SIZE)) + sizeof(t_zone)
-#define SMALL_ZONE_SIZE (100 * (SMALL_SIZE + METADATA_SIZE)) + sizeof(t_zone)
+#define TINY_ZONE_SIZE  ceil(((100 * (TINY_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)) / (double)getpagesize()) * getpagesize()
+#define SMALL_ZONE_SIZE ceil(((100 * (SMALL_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block) / (double)getpagesize())) * getpagesize()
 
 #define ZONE_SIZE(size) (IS_TINY(size) ? TINY_ZONE_SIZE : SMALL_ZONE_SIZE)
 #define FIRST_BLOCK_SIZE(size) (ZONE_SIZE(size) - sizeof(t_zone) - METADATA_SIZE)
@@ -29,6 +30,7 @@
 #define GET_ZONE_TYPE(size, zones) (IS_TINY(size) ? zones.tiny : zones.large)
 
 #define GET_RIGHT_ZONE(size) (IS_TINY(size) ? g_zones.tiny : g_zones.large)
+#define GET_RIGHT_TAIL(size) (IS_TINY(size) ? g_zones.tiny_tail : g_zones.small_tail)
 
 #define ZONES_NOT_ALLOCATED(zones) (!zones.tiny && !zones.small)
 

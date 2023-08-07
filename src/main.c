@@ -29,6 +29,8 @@ void *alloc_block(t_zone *zone, size_t size)
         curr_block = GET_BLOCK_HEAD(zone_head);
         while ((void*)curr_block - (void*)zone_head < zone->size)
         {
+            if (curr_block->size + (void *)curr_block - (void *)zone_head > zone->size)
+                break;
             if (curr_block->is_free && size <= curr_block->size && (!best_block || curr_block->size < best_block->size))
                 best_block = curr_block;
             curr_block = GET_NEXT_HEADER(curr_block, curr_block->size);
@@ -46,13 +48,13 @@ void *alloc_block(t_zone *zone, size_t size)
     return (alloc_block(zone, size));
 }
 
-void *alloc_memory_page(t_zone **zone, t_zone **zone_tail, size_t size)
+t_bool alloc_memory_page(t_zone **zone, t_zone **zone_tail, size_t size)
 {
     t_zone *mapped_memory;
 
     mapped_memory = (t_zone *)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
     if (mapped_memory == MAP_FAILED)
-        return (NULL);
+        return (false);
     mapped_memory->size = size;
     mapped_memory->next = NULL;
     if (*zone == NULL)
@@ -65,16 +67,23 @@ void *alloc_memory_page(t_zone **zone, t_zone **zone_tail, size_t size)
         (*zone_tail)->next = mapped_memory;
         *zone_tail = mapped_memory;
     }
-    return (mapped_memory);
+    return (true);
 }
 
 t_bool ft_zone_init(size_t size)
 {
+    printf("ft_zone_init %zu\n", size);
     if (IS_TINY(size))
-        g_zones.tiny  = alloc_memory_page(&g_zones.tiny, &g_zones.tiny_tail, TINY_ZONE_SIZE);
+    {
+        if (alloc_memory_page(&g_zones.tiny, &g_zones.tiny_tail, TINY_ZONE_SIZE) == false)
+            return (false);
+    }
     if (IS_SMALL(size))
-        g_zones.small = alloc_memory_page(&g_zones.small, &g_zones.small_tail, SMALL_ZONE_SIZE);
-    set_block_metadata(GET_BLOCK_HEAD(GET_RIGHT_ZONE(size)), true, FIRST_BLOCK_SIZE(size));
+    {
+        if (alloc_memory_page(&g_zones.small, &g_zones.small_tail, SMALL_ZONE_SIZE))
+            return (false);
+    }
+    set_block_metadata(GET_BLOCK_HEAD(GET_RIGHT_TAIL(size)), true, FIRST_BLOCK_SIZE(size));
     return ((IS_TINY(size) && g_zones.tiny != NULL) || (IS_SMALL(size) && g_zones.small != NULL));
 }
 
@@ -165,28 +174,32 @@ void log_zone(t_zone *zone)
         }
     }
 }
+#include <string.h>
 
 int main()
 {
     // printf("%zu\n", sizeof(t_zone));
-    char *nejma = ft_malloc(2);
-    char *nejma2 = ft_malloc(2);
-    char *nejma3 = ft_malloc(40);
-    char *nejma4 = ft_malloc(40);
-    char *nejma5 = ft_malloc(3000);
+    // char *nejma = ft_malloc(10);
+    // char *nejma2 = ft_malloc(10);
+    char *nejma3 = ft_malloc(10);
+    // memset(nejma3, 'a', 30);g
+    char *nejma4 = ft_malloc(10);
+    // char *nejma3 = ft_malloc(40);
+    // char *nejma4 = ft_malloc(40);
+    // char *nejma5 = ft_malloc(3000);
     log_zone(g_zones.tiny);
-    ft_free(nejma);
-    printf("------------------\n");
-    log_zone(g_zones.tiny);
-    ft_free(nejma4);
-    ft_free(nejma3);
-    nejma = ft_malloc(2);
-    printf("------------------\n");
-    log_zone(g_zones.tiny);
-    ft_free(nejma2);
-    ft_free(nejma);
-    printf("------------------\n");
-    log_zone(g_zones.tiny);
+    // ft_free(nejma);
+    // printf("------------------\n");
+    // log_zone(g_zones.tiny);
+    // ft_free(nejma4);
+    // ft_free(nejma3);
+    // nejma = ft_malloc(2);
+    // printf("------------------\n");
+    // log_zone(g_zones.tiny);
+    // ft_free(nejma2);
+    // ft_free(nejma);
+    // printf("------------------\n");
+    // log_zone(g_zones.tiny);
 
 
     // *nejma5 = 'a';
