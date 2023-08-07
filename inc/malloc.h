@@ -16,10 +16,11 @@
 #define IS_LARGE(x) (x > SMALL_SIZE)
 
 #define EFFECTIVE_SIZE(x) (x + sizeof(t_hdr_block) + sizeof(t_ftr_block))
+#define LARGE_BLOCK_SIZE(x) (x + sizeof(t_zone))
 
 #define METADATA_SIZE (sizeof(t_hdr_block) + sizeof(t_ftr_block))
-#define TINY_ZONE_SIZE  (100 * (TINY_SIZE + METADATA_SIZE))
-#define SMALL_ZONE_SIZE (100 * (SMALL_SIZE + METADATA_SIZE))
+#define TINY_ZONE_SIZE  (100 * (TINY_SIZE + METADATA_SIZE)) + sizeof(t_zone)
+#define SMALL_ZONE_SIZE (100 * (SMALL_SIZE + METADATA_SIZE)) + sizeof(t_zone)
 
 #define ZONE_SIZE(size) (IS_TINY(size) ? TINY_ZONE_SIZE : SMALL_ZONE_SIZE)
 #define FIRST_BLOCK_SIZE(size) (ZONE_SIZE(size) - sizeof(t_zone) - METADATA_SIZE)
@@ -33,8 +34,10 @@
 
 #define GET_BLOCK_HEAD(zone) ((t_hdr_block *)((void *)zone + sizeof(t_zone) + sizeof(t_hdr_block)))
 #define GET_MEMORY_BLOCK(block) ((void *)block + sizeof(t_hdr_block))
+#define GET_L_MEMORY_BLOCK(zone) ((void *)zone + sizeof(t_zone))
 #define GET_BLOCK_FOOTER(block) ((t_ftr_block *)((void *)block + block->size - sizeof(t_ftr_block)))
 #define GET_NEXT_HEADER(block, size) ((t_hdr_block *)((void *)block + sizeof(t_hdr_block) + size))
+#define GET_PREV_HEADER(block) ((t_hdr_block *)((void *)block - *((t_ftr_block *)((void *)block - sizeof(t_ftr_block))) - sizeof(t_hdr_block)))
 
 #if __WORDSIZE == 32
     #define ALLIGN(x) (((((x) - 1) >> 2) << 2) + 4)
@@ -78,6 +81,7 @@ typedef enum e_zone_type
 // structure representing a memory zone (tiny, small or large)
 typedef struct      s_zone
 {
+    size_t          size;     // pointer to the end of the zone
     struct s_zone   *next;      // pointer to the next zone
 }                   t_zone;
 
