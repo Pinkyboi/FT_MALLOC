@@ -1,7 +1,7 @@
 #include "malloc.h"
 
 t_zones g_zones = (t_zones){0};
-
+pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 inline size_t  get_alligned_size(size_t size)
 {
@@ -72,7 +72,8 @@ t_bool alloc_memory_page(t_zone **zone, t_zone **zone_tail, size_t size)
 
 t_bool ft_zone_init(size_t size)
 {
-    printf("ft_zone_init %zu\n", size);
+    if ((IS_TINY(size) && g_zones.tiny != NULL) || (IS_SMALL(size) && g_zones.small != NULL))
+        return (true);
     if (IS_TINY(size))
     {
         if (alloc_memory_page(&g_zones.tiny, &g_zones.tiny_tail, TINY_ZONE_SIZE) == false)
@@ -80,7 +81,7 @@ t_bool ft_zone_init(size_t size)
     }
     if (IS_SMALL(size))
     {
-        if (alloc_memory_page(&g_zones.small, &g_zones.small_tail, SMALL_ZONE_SIZE))
+        if (alloc_memory_page(&g_zones.small, &g_zones.small_tail, SMALL_ZONE_SIZE) == false)
             return (false);
     }
     set_block_metadata(GET_ZONE_FIRST_HEADER(GET_RIGHT_TAIL(size)), true, FIRST_BLOCK_SIZE(size));
@@ -108,6 +109,14 @@ t_hdr_block *search_in_zone(void *ptr, t_zone_type zone_type)
     return (NULL);
 }
 
+t_zone *search_in_large_zone(void *ptr)
+{
+    for (t_zone *zone_head = g_zones.large; zone_head; zone_head = zone_head->next)
+        if((void *)GET_L_MEMORY_BLOCK(zone_head) == ptr)
+            return (zone_head);
+    return (NULL);
+}
+
 void merge_memory_blocks(t_hdr_block *first_block, t_hdr_block *second_block)
 {
     if (first_block->is_free == false || second_block->is_free == false)
@@ -119,17 +128,13 @@ void merge_memory_blocks(t_hdr_block *first_block, t_hdr_block *second_block)
 void free_large_block(void *ptr)
 {
     t_zone *next_head;
+    t_zone *zone_head;
 
-    for (t_zone *zone_head = g_zones.large; zone_head; zone_head = zone_head->next)
-    {
-        if((void *)GET_L_MEMORY_BLOCK(zone_head) == ptr)
-        {
-            next_head = zone_head->next;
-            munmap(zone_head, zone_head->size);
-            zone_head = next_head;
-            return ;
-        }
-    }
+    if ((zone_head = search_in_large_zone(ptr)) == NULL)
+        return ;
+    next_head = zone_head->next;
+    munmap(zone_head, zone_head->size);
+    zone_head = next_head;
 }
 void ft_free(void *ptr)
 {
@@ -147,14 +152,21 @@ void ft_free(void *ptr)
 
 void *ft_malloc(size_t size)
 {
+    void *ptr;
+
     if (size == 0)
         return (NULL);
     if (IS_LARGE(size))
-        return (GET_L_MEMORY_BLOCK(alloc_memory_page(&g_zones.large, &g_zones.large_tail, LARGE_BLOCK_SIZE(size))));
+    {
+        if (alloc_memory_page(&g_zones.large, &g_zones.large_tail, LARGE_ZONE_SIZE(size)))
+            return (GET_L_MEMORY_BLOCK(g_zones.large_tail));
+        return (NULL);
+    }
     size = get_alligned_size(size);
     if (ZONES_NOT_ALLOCATED(g_zones) && ft_zone_init(size) == false)
         return (NULL);
-    return (alloc_block(GET_RIGHT_ZONE(size), size));
+    ptr = alloc_block(GET_RIGHT_ZONE(size), size);
+    return (ptr);
 }
 
 void log_zone(t_zone *zone)
@@ -173,31 +185,108 @@ void log_zone(t_zone *zone)
     }
 }
 
-void    *ft_realloc(void *ptr, size_t size)
+void *ft_memcpy(void *restrict dst, const void *restrict src, size_t n)
 {
-    t_hdr_block *block_header;
-
-    block_header = GET_BLOCK_HEADER(ptr);
-    // need check if the pointer is valid
-    if (get_alligned_size(size) == block_header->size)
-        return (ptr);
-    // 
+    for (size_t i = 0; i < n; i++)
+        ((char *)dst)[i] = ((char *)src)[i];
+    return (dst);
 }
 
-#include <string.h>
+void *ft_memset(void *b, int c, size_t len)
+{
+    for (size_t i = 0; i < len; i++)
+        ((char *)b)[i] = c;
+    return (b);
+}
 
+void    *ft_realloc(void *ptr, size_t size)
+{
+    t_hdr_block *old_header;
+    t_zone      *zone;
+    void        *new_block;
+    ssize_t      leftover;
+
+    old_header = NULL;
+    new_block  = NULL;
+    zone       = NULL;
+    if ((old_header = search_in_zone(ptr, TINY_ZONE)) || (old_header = search_in_zone(ptr, SMALL_ZONE)))
+    {
+        size = get_alligned_size(size);
+        if (size == old_header->size)
+            return (ptr);
+        leftover = (ssize_t)(old_header->size) - size;
+        if (leftover > (ssize_t)METADATA_SIZE)
+        {
+            set_block_metadata(GET_NEXT_HEADER(old_header, size), true, leftover - sizeof(t_hdr_block));
+            set_block_metadata(old_header, false, size);
+            return ptr;
+        }
+    }
+    if (old_header == NULL && (zone = search_in_large_zone(ptr)) == NULL)
+        return NULL;
+    if (!(new_block = ft_malloc(size)))
+        return NULL;
+    if (zone)
+        ft_memcpy(new_block, ptr, MIN(size, GET_L_BLOCK_SIZE(zone)));
+    else
+        ft_memcpy(new_block, ptr, MIN(size, GET_BLOCK_SIZE(old_header)));
+    ft_free(ptr);
+    return new_block;
+}
+
+void *ft_calloc(size_t count, size_t size)
+{
+    void *ptr;
+
+    if ((ptr = ft_malloc(count * size)) == NULL)
+        return (NULL);
+    ft_memset(ptr, 0, count * size);
+    return (ptr);
+}
+void show_alloc_mem()
+{
+    t_hdr_block *block_hdr;
+
+    pthread_mutex_lock(&g_mutex);
+    printf("TINY : %p\n", g_zones.tiny);
+    block_hdr = GET_ZONE_FIRST_HEADER(g_zones.tiny);
+    while (IS_VALID_ZONE_ADDR(g_zones.tiny, block_hdr))
+    {
+        printf("%p - %p : %d bytes\n", GET_MEMORY_BLOCK(block_hdr), GET_BLOCK_FOOTER(block_hdr), block_hdr->size);
+        block_hdr = GET_NEXT_HEADER(block_hdr, block_hdr->size);
+    }
+    printf("SMALL : %p\n", g_zones.small);
+    block_hdr = GET_ZONE_FIRST_HEADER(g_zones.small);
+    while (IS_VALID_ZONE_ADDR(g_zones.small, block_hdr))
+    {
+        printf("%p - %p : %d bytes\n", GET_MEMORY_BLOCK(block_hdr), GET_BLOCK_FOOTER(block_hdr), block_hdr->size);
+        block_hdr = GET_NEXT_HEADER(block_hdr, block_hdr->size);
+    }
+    printf("LARGE : %p\n", g_zones.large);
+    for (t_zone *zone_head = g_zones.large; zone_head; zone_head = zone_head->next)
+        printf("%p - %p : %zu bytes\n", GET_L_MEMORY_BLOCK(zone_head), zone_head + zone_head->size, zone_head->size);
+    pthread_mutex_unlock(&g_mutex);
+}
 int main()
 {
     // printf("%zu\n", sizeof(t_zone));
     // char *nejma = ft_malloc(10);
     // char *nejma2 = ft_malloc(10);
-    char *nejma3 = ft_malloc(10);
-    memset(nejma3, 'a', 30);
-    char *nejma4 = ft_malloc(10);
+    // char *nejma3 = ft_malloc(1000000);
+    // memset(nejma3, 'a', 30);
+    char *nejma4 = ft_malloc(50);
+
+    // printf("%p\n", nejma4);
+    // ft_free(nejma3);
+    nejma4 = ft_realloc(nejma4, 300);
+    nejma4 = ft_malloc(10000);
+    // nejma4 = ft_realloc(nejma4, 50);
+    // nejma4 = ft_realloc(nejma4, 1000);
     // char *nejma3 = ft_malloc(40);
     // char *nejma4 = ft_malloc(40);
     // char *nejma5 = ft_malloc(3000);
-    log_zone(g_zones.tiny);
+    // log_zone(g_zones.small);
+    show_alloc_mem();
     // printf("%p", nejma4);
     // ft_free(nejma);
     // printf("------------------\n");

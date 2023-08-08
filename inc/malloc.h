@@ -17,30 +17,34 @@
 #define IS_LARGE(x) (x > SMALL_SIZE)
 
 #define EFFECTIVE_SIZE(x) (x + sizeof(t_hdr_block) + sizeof(t_ftr_block))
-#define LARGE_BLOCK_SIZE(x) (x + sizeof(t_zone))
+
+#define CEIL(x) (x - (int)x > 0 ? (int)x + 1 : (int)x)
 
 #define METADATA_SIZE (sizeof(t_hdr_block) + sizeof(t_ftr_block))
-#define TINY_ZONE_SIZE  ceil(((100 * (TINY_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)) / (double)getpagesize()) * getpagesize()
-#define SMALL_ZONE_SIZE ceil(((100 * (SMALL_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block) / (double)getpagesize())) * getpagesize()
+#define TINY_ZONE_SIZE  CEIL(((100 * (TINY_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)) / (double)getpagesize()) * getpagesize()
+#define SMALL_ZONE_SIZE CEIL(((100 * (SMALL_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block) / (double)getpagesize())) * getpagesize()
+#define LARGE_ZONE_SIZE(x) CEIL((x + sizeof(t_zone)) / (double)getpagesize()) * getpagesize()
 
 #define ZONE_SIZE(size) (IS_TINY(size) ? TINY_ZONE_SIZE : SMALL_ZONE_SIZE)
 #define FIRST_BLOCK_SIZE(size) (ZONE_SIZE(size) - sizeof(t_zone) - METADATA_SIZE)
 
-#define GET_RIGHT_ZONE(size) (IS_TINY(size) ? g_zones.tiny : IS_SMALL(g_zones.small) ? g_zones.small : g_zones.large)
-// #define GET_RIGHT_ZONE(size, zone_type) (zone_type == TINY_ZONE ? g_zones.tiny : zone_type == SMALL_ZONE ? g_zones.small : g_zones.large)
-
+#define GET_RIGHT_ZONE(size) (IS_TINY(size) ? g_zones.tiny : IS_SMALL(size) ? g_zones.small : g_zones.large)
 #define GET_RIGHT_TAIL(size) (IS_TINY(size) ? g_zones.tiny_tail : g_zones.small_tail)
 
-#define ZONES_NOT_ALLOCATED(zones) (!zones.tiny && !zones.small)
-
+#define ZONES_NOT_ALLOCATED(zones) (!zones.tiny || !zones.small)
 #define GET_ZONE_FIRST_HEADER(zone) ((t_hdr_block *)((void *)zone + sizeof(t_zone) + sizeof(t_hdr_block)))
 
 #define GET_BLOCK_HEADER(block) ((void *)block - sizeof(t_hdr_block))
+#define GET_LBLOCK_HEADER(block) ((void *)block - sizeof(t_zone))
 #define GET_MEMORY_BLOCK(hdr) ((void *)hdr + sizeof(t_hdr_block))
 #define GET_L_MEMORY_BLOCK(zone) ((void *)zone + sizeof(t_zone))
 #define GET_BLOCK_FOOTER(hdr) ((t_ftr_block *)((void *)hdr + hdr->size + sizeof(t_hdr_block) - sizeof(t_ftr_block)))
 #define GET_NEXT_HEADER(hdr, size) ((t_hdr_block *)((void *)hdr + sizeof(t_hdr_block) + size))
 #define GET_PREV_HEADER(hdr) ((t_hdr_block *)((void *)hdr - *((t_ftr_block *)((void *)hdr - sizeof(t_ftr_block))) - sizeof(t_hdr_block)))
+#define GET_BLOCK_SIZE(hdr) (hdr->size - sizeof(t_ftr_block))
+#define GET_L_BLOCK_SIZE(zone) (zone->size - sizeof(t_zone))
+
+#define MIN(a, b) (a < b ? a : b)
 
 #define IS_VALID_ZONE_ADDR(zone, addr) ((void *)zone < (void *)addr && (void *)addr < (void *)zone + zone->size)
 
@@ -102,10 +106,14 @@ typedef struct      s_zones
 }                   t_zones;
 
 extern t_zones      g_zones;
+extern pthread_mutex_t g_mutex;
 
 void    *ft_malloc(size_t size);
 void    *ft_realloc(void *ptr, size_t size);
+void    *ft_calloc(size_t count, size_t size);
 void    ft_free(void *ptr);
+
+void    show_alloc_mem();
 
 size_t  get_alligned_size(size_t size);
 t_bool  ft_zone_init(size_t size);
