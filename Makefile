@@ -21,6 +21,8 @@ SRC_NAME =	calloc.c\
 			realloc.c\
 			utils.c
 
+HDR_PATH = $(INC_PATH)/malloc.h
+
 OBJ_NAME = $(SRC_NAME:.c=.o)
 
 SRC = $(addprefix $(SRC_PATH),$(SRC_NAME))
@@ -35,7 +37,7 @@ $(NAME): $(OBJ)
 	@ln -sf $(NAME) $(SYMLINK)
 	@echo "\033[32m[OK]\033[0m \033[33mLibft_malloc compiled\033[0m"
 
-$(OBJ_PATH)%.o: $(SRC_PATH)%.c
+$(OBJ_PATH)%.o: $(SRC_PATH)%.c $(HDR_PATH)
 	@mkdir -p $(OBJ_PATH)
 	@$(CC) $(FLAGS) -I $(INC_PATH) -o $@ -c $<
 
