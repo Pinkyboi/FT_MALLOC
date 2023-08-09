@@ -16,12 +16,11 @@ INC_PATH = ./inc/
 SRC_NAME =	calloc.c\
 			free.c\
 			log.c\
-			main.c\
 			malloc.c\
 			realloc.c\
 			utils.c
 
-HDR_PATH = $(INC_PATH)/malloc.h
+DEPS = $(INC_PATH)/malloc.h
 
 OBJ_NAME = $(SRC_NAME:.c=.o)
 
@@ -33,11 +32,11 @@ FLAGS = -Wall -Wextra -Werror -I $(INC_PATH)
 all: $(NAME)
 
 $(NAME): $(OBJ)
-	@$(CC) $(FLAGS) -shared -o $@ $^
+	@$(CC) $(FLAGS) -shared $^ -o $@
 	@ln -sf $(NAME) $(SYMLINK)
 	@echo "\033[32m[OK]\033[0m \033[33mLibft_malloc compiled\033[0m"
 
-$(OBJ_PATH)%.o: $(SRC_PATH)%.c $(HDR_PATH)
+$(OBJ_PATH)%.o: $(SRC_PATH)%.c $(DEPS)
 	@mkdir -p $(OBJ_PATH)
 	@$(CC) $(FLAGS) -I $(INC_PATH) -o $@ -c $<
 
