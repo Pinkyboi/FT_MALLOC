@@ -55,8 +55,6 @@ static void *alloc_block(t_zone *zone, size_t size)
         curr_block_hdr = GET_ZONE_FIRST_HEADER(zone_head);
         while (IS_VALID_ZONE_ADDR(zone, curr_block_hdr))
         {
-            if (IS_VALID_ZONE_ADDR(zone, curr_block_hdr + curr_block_hdr->size))
-                break;
             if (curr_block_hdr->is_free && size <= curr_block_hdr->size && (!best_block_hdr || curr_block_hdr->size < best_block_hdr->size))
                 best_block_hdr = curr_block_hdr;
             curr_block_hdr = GET_NEXT_HEADER(curr_block_hdr, curr_block_hdr->size);
@@ -74,16 +72,23 @@ static void *alloc_block(t_zone *zone, size_t size)
     return (alloc_block(zone, size));
 }
 
+static inline void *get_large_alloc(size_t size)
+{
+    if (LARGE_ZONE_SIZE(size) > g_zones.zone_size_limit.rlim_cur)
+        return (NULL);
+    if (alloc_memory_page(&g_zones.large, &g_zones.large_tail, LARGE_ZONE_SIZE(size)))
+        return (GET_L_MEMORY_BLOCK(g_zones.large_tail));
+    return (NULL);
+}
+
 void *ft_malloc(size_t size)
 {
     if (size == 0)
         return (NULL);
+    if (g_zones.zone_size_limit.rlim_cur == 0)
+        getrlimit(RLIMIT_DATA, &g_zones.zone_size_limit);
     if (IS_LARGE(size))
-    {
-        if (alloc_memory_page(&g_zones.large, &g_zones.large_tail, LARGE_ZONE_SIZE(size)))
-            return (GET_L_MEMORY_BLOCK(g_zones.large_tail));
-        return (NULL);
-    }
+        return (get_large_alloc(size));
     size = get_alligned_size(size);
     if (ZONES_NOT_ALLOCATED(g_zones) && ft_zone_init(size) == false)
         return (NULL);

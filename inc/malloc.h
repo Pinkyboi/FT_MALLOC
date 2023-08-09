@@ -103,6 +103,7 @@ typedef struct      s_zones
     struct s_zone   *small_tail;      // pointer to the next zone
     t_zone          *large;     // pointer to the large zone
     struct s_zone   *large_tail;      // pointer to the next zone
+    struct rlimit   zone_size_limit;
 }                   t_zones;
 
 extern t_zones          g_zones;
@@ -121,9 +122,11 @@ void            ft_free(void *ptr);
 void            free(void *ptr);
 
 void            show_alloc_mem();
+void            show_alloc_mem_ex();
 
-size_t          get_alligned_size(size_t size);
 void            set_block_metadata(t_hdr_block *memory_block, t_bool is_free, size_t size);
+size_t          get_alligned_size(size_t size);
 t_hdr_block*    search_in_zone(void *ptr, t_zone_type zone_type);
 t_zone*         search_in_large_zone(void *ptr);
+
 #endif
