@@ -105,16 +105,25 @@ typedef struct      s_zones
     struct s_zone   *large_tail;      // pointer to the next zone
 }                   t_zones;
 
-extern t_zones      g_zones;
-extern pthread_mutex_t g_mutex;
+extern t_zones          g_zones;
+extern pthread_mutex_t  g_mutex;
 
-void    *ft_malloc(size_t size);
-void    *ft_realloc(void *ptr, size_t size);
-void    *ft_calloc(size_t count, size_t size);
-void    ft_free(void *ptr);
+void            *ft_malloc(size_t size);
+void            *malloc(size_t size);
 
-void    show_alloc_mem();
+void            *ft_realloc(void *ptr, size_t size);
+void            *realloc(void *ptr, size_t size);
 
-size_t  get_alligned_size(size_t size);
-t_bool  ft_zone_init(size_t size);
+void            *ft_calloc(size_t count, size_t size);
+void            *calloc(size_t count, size_t size);
+
+void            ft_free(void *ptr);
+void            free(void *ptr);
+
+void            show_alloc_mem();
+
+size_t          get_alligned_size(size_t size);
+void            set_block_metadata(t_hdr_block *memory_block, t_bool is_free, size_t size);
+t_hdr_block*    search_in_zone(void *ptr, t_zone_type zone_type);
+t_zone*         search_in_large_zone(void *ptr);
 #endif
