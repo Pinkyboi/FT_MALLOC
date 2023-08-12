@@ -33,13 +33,14 @@ static t_bool ft_zone_init(size_t size)
     {
         if (alloc_memory_page(&g_zones.tiny, &g_zones.tiny_tail, TINY_ZONE_SIZE) == false)
             return (false);
+        set_block_metadata(GET_ZONE_FIRST_HEADER(GET_RIGHT_TAIL(size)), true, FIRST_BLOCK_SIZE(TINY_ZONE));
     }
     if (IS_SMALL(size))
     {
         if (alloc_memory_page(&g_zones.small, &g_zones.small_tail, SMALL_ZONE_SIZE) == false)
             return (false);
+        set_block_metadata(GET_ZONE_FIRST_HEADER(GET_RIGHT_TAIL(size)), true, FIRST_BLOCK_SIZE(SMALL_ZONE));
     }
-    set_block_metadata(GET_ZONE_FIRST_HEADER(GET_RIGHT_TAIL(size)), true, FIRST_BLOCK_SIZE(size));
     return ((IS_TINY(size) && g_zones.tiny != NULL) || (IS_SMALL(size) && g_zones.small != NULL));
 }
 
@@ -47,25 +48,27 @@ static void *alloc_block(t_zone *zone, size_t size)
 {
     t_hdr_block *curr_block_hdr;
     t_hdr_block *best_block_hdr;
+    size_t      aligned_size;
     size_t      leftover_size;
 
     best_block_hdr = NULL;
+    aligned_size = get_alligned_size(size);
     for (t_zone *zone_head = zone; zone_head; zone_head = zone_head->next)
     {
         curr_block_hdr = GET_ZONE_FIRST_HEADER(zone_head);
         while (IS_VALID_ZONE_ADDR(zone, curr_block_hdr))
         {
-            if (curr_block_hdr->is_free && size <= curr_block_hdr->size && (!best_block_hdr || curr_block_hdr->size < best_block_hdr->size))
+            if (curr_block_hdr->is_free && aligned_size <= curr_block_hdr->size && (!best_block_hdr || curr_block_hdr->size < best_block_hdr->size))
                 best_block_hdr = curr_block_hdr;
             curr_block_hdr = GET_NEXT_HEADER(curr_block_hdr, curr_block_hdr->size);
         }
     }
     if (best_block_hdr)
     {
-        leftover_size = best_block_hdr->size - size;
+        leftover_size = best_block_hdr->size - aligned_size;
         if (leftover_size > METADATA_SIZE)
-            set_block_metadata(GET_NEXT_HEADER(best_block_hdr, size), true, leftover_size - sizeof(t_hdr_block));
-        set_block_metadata(best_block_hdr, false, size);
+            set_block_metadata(GET_NEXT_HEADER(best_block_hdr, aligned_size), true, leftover_size - sizeof(t_hdr_block));
+        set_block_metadata(best_block_hdr, false, aligned_size);
         return (GET_MEMORY_BLOCK(best_block_hdr));
     }
     ft_zone_init(size);
@@ -89,7 +92,6 @@ void *ft_malloc(size_t size)
         getrlimit(RLIMIT_DATA, &g_zones.zone_size_limit);
     if (IS_LARGE(size))
         return (get_large_alloc(size));
-    size = get_alligned_size(size);
     if (ZONES_NOT_ALLOCATED(g_zones) && ft_zone_init(size) == false)
         return (NULL);
     return (alloc_block(GET_RIGHT_ZONE(size), size));

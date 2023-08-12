@@ -34,6 +34,10 @@ void ft_free(void *ptr)
     }
     else
         free_large_block(ptr);
+    // if (GET_ZONE_FIRST_HEADER(g_zones.tiny)->size == FIRST_BLOCK_SIZE(TINY_ZONE))
+    //     munmap(g_zones.tiny, g_zones.tiny->size);
+    // if (GET_ZONE_FIRST_HEADER(g_zones.small)->size == FIRST_BLOCK_SIZE(SMALL_ZONE))
+    //     munmap(g_zones.small, g_zones.small->size);
 }
 
 void free(void *ptr)

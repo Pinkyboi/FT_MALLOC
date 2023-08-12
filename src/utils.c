@@ -14,24 +14,6 @@ void set_block_metadata(t_hdr_block *memory_block, t_bool is_free, size_t size)
     *GET_BLOCK_FOOTER(memory_block) = size;
 }
 
-void print_base(unsigned long number, unsigned short base)
-{
-    const char  tokens[] = "0123456789abcdefghijklmnopqrstuvwxyz";
-    char        base_number[sizeof(number) * 8];
-    char        *base_pointer;               
-
-    if (base > sizeof(tokens))
-        return;
-    base_pointer = base_number;
-    while (number)
-    {
-        *base_pointer++ = tokens[number % base];
-        number /= base;
-    }
-    while (base_pointer-- != base_number - 1)
-        write(1, base_pointer, 1);
-}
-
 t_hdr_block *search_in_zone(void *ptr, t_zone_type zone_type)
 {
     t_hdr_block *curr_block;

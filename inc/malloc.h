@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <pthread.h>
-#include <math.h>
 
 #define TINY_SIZE 128
 #define SMALL_SIZE 1024
@@ -21,14 +20,17 @@
 #define CEIL(x) (x - (int)x > 0 ? (int)x + 1 : (int)x)
 
 #define METADATA_SIZE (sizeof(t_hdr_block) + sizeof(t_ftr_block))
-#define TINY_ZONE_SIZE  CEIL(((100 * (TINY_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)) / (double)getpagesize()) * getpagesize()
-#define SMALL_ZONE_SIZE CEIL(((100 * (SMALL_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block) / (double)getpagesize())) * getpagesize()
+#define TINY_ZONE_SIZE  (100 * (TINY_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)
+#define SMALL_ZONE_SIZE (100 * (SMALL_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)
 #define LARGE_ZONE_SIZE(x) CEIL((x + sizeof(t_zone)) / (double)getpagesize()) * getpagesize()
 
-#define ZONE_SIZE(size) (IS_TINY(size) ? TINY_ZONE_SIZE : SMALL_ZONE_SIZE)
-#define FIRST_BLOCK_SIZE(size) (ZONE_SIZE(size) - sizeof(t_zone) - METADATA_SIZE)
+#define ZONE_SIZE(type) (type == TINY_ZONE ? TINY_ZONE_SIZE : SMALL_ZONE_SIZE)
+
+#define FIRST_BLOCK_SIZE(type) (ZONE_SIZE(type) - sizeof(t_zone) - METADATA_SIZE)
 
 #define GET_RIGHT_ZONE(size) (IS_TINY(size) ? g_zones.tiny : IS_SMALL(size) ? g_zones.small : g_zones.large)
+#define GET_ZONE_BY_TYPE(type) (type == TINY_ZONE ? g_zones.tiny : type == SMALL_ZONE ? g_zones.small : g_zones.large)
+#define GET_ZONE_NAME(type) (type == TINY_ZONE ? "TINY" : type == SMALL_ZONE ? "SMALL" : "LARGE")
 #define GET_RIGHT_TAIL(size) (IS_TINY(size) ? g_zones.tiny_tail : g_zones.small_tail)
 
 #define ZONES_NOT_ALLOCATED(zones) (!zones.tiny || !zones.small)
@@ -43,6 +45,10 @@
 #define GET_PREV_HEADER(hdr) ((t_hdr_block *)((void *)hdr - *((t_ftr_block *)((void *)hdr - sizeof(t_ftr_block))) - sizeof(t_hdr_block)))
 #define GET_BLOCK_SIZE(hdr) (hdr->size - sizeof(t_ftr_block))
 #define GET_L_BLOCK_SIZE(zone) (zone->size - sizeof(t_zone))
+
+
+#define PRINT_ADDR(addr) write(1, "0x", 2); print_base((long long)addr, 16)
+#define PUT_NBR(number) print_base(number, 10)
 
 #define MIN(a, b) (a < b ? a : b)
 
@@ -129,4 +135,6 @@ size_t          get_alligned_size(size_t size);
 t_hdr_block*    search_in_zone(void *ptr, t_zone_type zone_type);
 t_zone*         search_in_large_zone(void *ptr);
 
+
+void print_base(long long number, unsigned short base);
 #endif
