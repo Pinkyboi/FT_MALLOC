@@ -47,7 +47,7 @@ inline static void print_mem_info(void *start, void *end, long size)
     PRINT_ADDR(start);
     putstr(" - ");
     PRINT_ADDR(end);
-    putstr(" : ");
+    putstr("\t: ");
     PUT_NBR(size);
     putstr(" bytes\n");
 }
@@ -59,7 +59,7 @@ static void print_zone_infos(t_zone_type zone_type, t_bool extra_infos)
 
     chosen_zone = GET_ZONE_BY_TYPE(zone_type);
     putstr(GET_ZONE_NAME(zone_type));
-    putstr(" : ");
+    putstr("\t: ");
     PRINT_ADDR(chosen_zone);
     putstr("\n");
     if (!chosen_zone)

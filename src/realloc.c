@@ -12,7 +12,7 @@ void    *realloc(void *ptr, size_t size)
     t_hdr_block *old_header;
     t_zone      *zone;
     void        *new_block;
-    ssize_t     leftover;
+    size_t      leftover;
 
     old_header = NULL;
     new_block  = NULL;
@@ -25,8 +25,8 @@ void    *realloc(void *ptr, size_t size)
         size = get_alligned_size(size);
         if (size == old_header->size)
             return (ptr);
-        leftover = (ssize_t)(old_header->size) - size;
-        if (leftover > (ssize_t)METADATA_SIZE)
+        leftover = old_header->size - size;
+        if (size <= old_header->size && leftover > (ssize_t)METADATA_SIZE)
         {
             set_block_metadata(GET_NEXT_HEADER(old_header, size), true, leftover - sizeof(t_hdr_block));
             set_block_metadata(old_header, false, size);

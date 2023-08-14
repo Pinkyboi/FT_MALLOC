@@ -10,14 +10,49 @@ static void merge_memory_blocks(t_hdr_block *first_block, t_hdr_block *second_bl
 
 static void free_large_block(void *ptr)
 {
-    t_zone *next_head;
-    t_zone *zone_head;
+    t_zone *zone;
+    t_zone **zone_tail;
 
-    if ((zone_head = search_in_large_zone(ptr)) == NULL)
-        return ;
-    next_head = zone_head->next;
-    munmap(zone_head, zone_head->size);
-    zone_head = next_head;
+    zone_tail = GET_ZONE_TAIL_ADDR(LARGE_ZONE);
+    for (t_zone **zone_head = GET_ZONE_ADDR(LARGE_ZONE); *zone_head; zone_head = &(*zone_head)->next)
+    {
+        if((void *)GET_L_MEMORY_BLOCK(*zone_head) == ptr)
+        {
+            if (GET_ZONE_ADDR(LARGE_ZONE) == zone_head)
+                break;
+            zone = *zone_head;
+            *zone_head =  (*zone_head)->next;
+            if (*zone_tail == zone)
+                *zone_tail = *zone_head;
+            munmap(zone, zone->size);
+            break;
+        }
+    }
+}
+
+void free_block(t_hdr_block *block_hdr, t_zone_type zone_type)
+{
+    t_zone *zone;
+    t_zone **zone_tail;
+
+    zone_tail = GET_ZONE_TAIL_ADDR(zone_type);
+    block_hdr->is_free = true;
+    merge_memory_blocks(block_hdr, GET_NEXT_HEADER(block_hdr, block_hdr->size));
+    merge_memory_blocks(GET_PREV_HEADER(block_hdr), block_hdr);
+    for (t_zone **zone_head = GET_ZONE_ADDR(zone_type); *zone_head; zone_head = &(*zone_head)->next)
+    {
+        if (FIRST_BLOCK_SIZE(zone_type) == GET_ZONE_FIRST_HEADER(*zone_head)->size)
+        {
+            if (GET_ZONE_ADDR(zone_type) == zone_head)
+                break;
+            zone = *zone_head;
+            *zone_head =  (*zone_head)->next;
+            if (*zone_tail == zone)
+                *zone_tail = *zone_head;
+            munmap(zone, zone->size);
+            break;
+        }
+    }
 }
 
 void ft_free(void *ptr)
@@ -26,18 +61,12 @@ void ft_free(void *ptr)
 
     if (ptr == NULL)
         return ;
-    if ((block_hdr = search_in_zone(ptr, TINY_ZONE)) || (block_hdr = search_in_zone(ptr, SMALL_ZONE)))
-    {
-        block_hdr->is_free = true;
-        merge_memory_blocks(block_hdr, GET_NEXT_HEADER(block_hdr, block_hdr->size));
-        merge_memory_blocks(GET_PREV_HEADER(block_hdr), block_hdr);
-    }
+    if ((block_hdr = search_in_zone(ptr, TINY_ZONE))) 
+        free_block(block_hdr, TINY_ZONE);
+    else if ((block_hdr = search_in_zone(ptr, SMALL_ZONE)))
+        free_block(block_hdr, SMALL_ZONE);
     else
         free_large_block(ptr);
-    // if (GET_ZONE_FIRST_HEADER(g_zones.tiny)->size == FIRST_BLOCK_SIZE(TINY_ZONE))
-    //     munmap(g_zones.tiny, g_zones.tiny->size);
-    // if (GET_ZONE_FIRST_HEADER(g_zones.small)->size == FIRST_BLOCK_SIZE(SMALL_ZONE))
-    //     munmap(g_zones.small, g_zones.small->size);
 }
 
 void free(void *ptr)

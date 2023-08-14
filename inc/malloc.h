@@ -20,8 +20,8 @@
 #define CEIL(x) (x - (int)x > 0 ? (int)x + 1 : (int)x)
 
 #define METADATA_SIZE (sizeof(t_hdr_block) + sizeof(t_ftr_block))
-#define TINY_ZONE_SIZE  (100 * (TINY_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)
-#define SMALL_ZONE_SIZE (100 * (SMALL_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)
+#define TINY_ZONE_SIZE  CEIL(((100 * (TINY_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)) /(double)getpagesize()) * getpagesize()
+#define SMALL_ZONE_SIZE CEIL(((100 * (SMALL_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)) / (double)getpagesize()) * getpagesize()
 #define LARGE_ZONE_SIZE(x) CEIL((x + sizeof(t_zone)) / (double)getpagesize()) * getpagesize()
 
 #define ZONE_SIZE(type) (type == TINY_ZONE ? TINY_ZONE_SIZE : SMALL_ZONE_SIZE)
@@ -30,10 +30,11 @@
 
 #define GET_RIGHT_ZONE(size) (IS_TINY(size) ? g_zones.tiny : IS_SMALL(size) ? g_zones.small : g_zones.large)
 #define GET_ZONE_BY_TYPE(type) (type == TINY_ZONE ? g_zones.tiny : type == SMALL_ZONE ? g_zones.small : g_zones.large)
+#define GET_ZONE_TAIL(type) (type == TINY_ZONE ? g_zones.tiny_tail : type == SMALL_ZONE ? g_zones.small_tail : g_zones.large_tail)
+#define GET_ZONE_TAIL_ADDR(type) (type == TINY_ZONE ? &g_zones.tiny_tail : type == SMALL_ZONE ? &g_zones.small_tail : &g_zones.large_tail)
+#define GET_ZONE_ADDR(type) (type == TINY_ZONE ? &g_zones.tiny : type == SMALL_ZONE ? &g_zones.small : &g_zones.large)
 #define GET_ZONE_NAME(type) (type == TINY_ZONE ? "TINY" : type == SMALL_ZONE ? "SMALL" : "LARGE")
-#define GET_RIGHT_TAIL(size) (IS_TINY(size) ? g_zones.tiny_tail : g_zones.small_tail)
 
-#define ZONES_NOT_ALLOCATED(zones) (!zones.tiny || !zones.small)
 #define GET_ZONE_FIRST_HEADER(zone) ((t_hdr_block *)((void *)zone + sizeof(t_zone) + sizeof(t_hdr_block)))
 
 #define GET_BLOCK_HEADER(block) ((void *)block - sizeof(t_hdr_block))
@@ -109,7 +110,6 @@ typedef struct      s_zones
     struct s_zone   *small_tail;      // pointer to the next zone
     t_zone          *large;     // pointer to the large zone
     struct s_zone   *large_tail;      // pointer to the next zone
-    struct rlimit   zone_size_limit;
 }                   t_zones;
 
 extern t_zones          g_zones;

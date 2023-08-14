@@ -19,7 +19,7 @@ t_hdr_block *search_in_zone(void *ptr, t_zone_type zone_type)
     t_hdr_block *curr_block;
     t_zone      *zone;
 
-    zone = (zone_type == TINY_ZONE) ? g_zones.tiny : g_zones.small;
+    zone = GET_ZONE_BY_TYPE(zone_type);
     for (t_zone *zone_head = zone; zone_head; zone_head = zone_head->next)
     {
         curr_block = GET_ZONE_FIRST_HEADER(zone_head);
