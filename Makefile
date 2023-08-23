@@ -18,6 +18,7 @@ SRC_NAME =	calloc.c\
 			log.c\
 			malloc.c\
 			realloc.c\
+			reallocf.c\
 			utils.c
 
 DEPS = $(INC_PATH)/malloc.h

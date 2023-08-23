@@ -7,17 +7,16 @@ static void *ft_memcpy(void *restrict dst, const void *restrict src, size_t n)
     return (dst);
 }
 
-void    *realloc(void *ptr, size_t size)
+void    *ft_realloc(void *ptr, size_t size)
 {
+    void        *new_block;
     t_hdr_block *old_header;
     t_zone      *zone;
-    void        *new_block;
     size_t      leftover;
 
     old_header = NULL;
     new_block  = NULL;
     zone       = NULL;
-    pthread_mutex_lock(&g_mutex);
     if (ptr == NULL)
         return ft_malloc(size);
     if ((old_header = search_in_zone(ptr, TINY_ZONE)) || (old_header = search_in_zone(ptr, SMALL_ZONE)))
@@ -42,6 +41,15 @@ void    *realloc(void *ptr, size_t size)
     else
         ft_memcpy(new_block, ptr, MIN(size, GET_BLOCK_SIZE(old_header)));
     ft_free(ptr);
+    return new_block;
+}
+
+void    *realloc(void *ptr, size_t size)
+{
+    void *new_block;
+
+    pthread_mutex_lock(&g_mutex);
+    new_block = ft_realloc(ptr, size);
     pthread_mutex_unlock(&g_mutex);
     return new_block;
 }
