@@ -8,21 +8,23 @@
 #include <sys/mman.h>
 #include <pthread.h>
 
-#define TINY_SIZE 128
-#define SMALL_SIZE 1024
+#define TINY_MAX 128
+#define TINY_MIN 1
+#define SMALL_MAX 1024
+#define SMALL_MIN TINY_MAX + 1
 
-#define IS_TINY(x) (x <= TINY_SIZE)
-#define IS_SMALL(x) (x > TINY_SIZE && x <= SMALL_SIZE)
-#define IS_LARGE(x) (x > SMALL_SIZE)
+#define IS_TINY(x) (x <= TINY_MAX)
+#define IS_SMALL(x) (x > TINY_MAX && x <= SMALL_MAX)
+#define IS_LARGE(x) (x > SMALL_MAX)
 
 #define EFFECTIVE_SIZE(x) (x + sizeof(t_hdr_block) + sizeof(t_ftr_block))
 
-#define CEIL(x) (x - (int)x > 0 ? (int)x + 1 : (int)x)
+#define CEIL(x) ((x - (int)x) > 0.0 ? (int)x + 1 : (int)x)
 
 #define METADATA_SIZE (sizeof(t_hdr_block) + sizeof(t_ftr_block))
-#define TINY_ZONE_SIZE  CEIL(((100 * (TINY_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)) /(double)getpagesize()) * getpagesize()
-#define SMALL_ZONE_SIZE CEIL(((100 * (SMALL_SIZE + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)) / (double)getpagesize()) * getpagesize()
-#define LARGE_ZONE_SIZE(x) CEIL((x + sizeof(t_zone)) / (double)getpagesize()) * getpagesize()
+#define TINY_ZONE_SIZE  (((100 * (TINY_MIN + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)))
+#define SMALL_ZONE_SIZE (((100 * (SMALL_MIN + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)))
+#define LARGE_ZONE_SIZE(x) (x + sizeof(t_zone))
 
 #define ZONE_SIZE(type) (type == TINY_ZONE ? TINY_ZONE_SIZE : SMALL_ZONE_SIZE)
 
@@ -63,35 +65,35 @@
 
 
 
-typedef enum e_bool
+typedef enum        e_bool
 {
     false = 0,
     true  = 1
-}           t_bool;
+}                   t_bool;
 
-typedef enum e_zone_type
+typedef enum        e_zone_type
 {
     TINY_ZONE,
     SMALL_ZONE,
     LARGE_ZONE
-}           t_zone_type;
+}                   t_zone_type;
 
 #if __WORDSIZE == 32
-    typedef uint16_t  t_ftr_block;
-    // strcutre representing a block of memory
-    typedef struct          s_hdr_block
-    {
-        uint16_t  is_free: 1;    // is the block free
-        uint16_t  size: 15;   // size of the block
-    }                       t_hdr_block;
+typedef uint16_t    t_ftr_block;
+// strcutre representing a block of memory
+typedef struct      s_hdr_block
+{
+    uint16_t        is_free: 1;    // is the block free
+    uint16_t        size: 15;   // size of the block
+}                   t_hdr_block;
 #else
-    typedef uint32_t  t_ftr_block;
-    // strcutre representing a block of memory
-    typedef struct          s_hdr_block
-    {
-        uint32_t  is_free: 1;    // is the block free
-        uint32_t  size: 31;   // size of the block
-    }                       t_hdr_block;
+typedef uint32_t    t_ftr_block;
+
+typedef struct      s_hdr_block
+{
+    uint32_t        is_free: 1;    // is the block free
+    uint32_t        size: 31;   // size of the block
+}                   t_hdr_block;
 #endif
 
 // structure representing a memory zone (tiny, small or large)
@@ -105,11 +107,11 @@ typedef struct      s_zone
 typedef struct      s_zones
 {
     t_zone          *tiny;      // pointer to the tiny zone
-    struct s_zone   *tiny_tail;      // pointer to the next zone
+    t_zone          *tiny_tail;      // pointer to the next zone
     t_zone          *small;     // pointer to the small zone
-    struct s_zone   *small_tail;      // pointer to the next zone
+    t_zone          *small_tail;      // pointer to the next zone
     t_zone          *large;     // pointer to the large zone
-    struct s_zone   *large_tail;      // pointer to the next zone
+    t_zone          *large_tail;      // pointer to the next zone
 }                   t_zones;
 
 extern t_zones          g_zones;
