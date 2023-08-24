@@ -32,14 +32,15 @@ static void print_hex(unsigned char *ptr, size_t size)
     {
         if (i % 16 == 0)
             printf("%p: ", (void *)(ptr + i));
+        if (i % 16 && i % 8 == 0)
+            printf(" ");
         if (ptr[i])
             printf("%02x ", ptr[i]);
         else
-            printf("%02x ", ptr[i]);
-        if (i % 16 == 15)
+            printf("\033[37m%02x\033[0m ", ptr[i]);
+        if (i % 16 == 15 || i + 1 == size)
             printf("\n");
     }
-    printf("\n");
 }
 
 inline static void print_mem_info(void *start, void *end, long size)
@@ -47,9 +48,9 @@ inline static void print_mem_info(void *start, void *end, long size)
     PRINT_ADDR(start);
     putstr(" - ");
     PRINT_ADDR(end);
-    putstr("\t: ");
+    putstr(" : \033[0;32m");
     PUT_NBR(size);
-    putstr(" bytes\n");
+    putstr(" \033[0mbytes\n");
 }
 
 static void print_zone_infos(t_zone_type zone_type, t_bool extra_infos)

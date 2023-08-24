@@ -7,8 +7,9 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <pthread.h>
+#include <math.h>
 
-#define TINY_MAX 128
+#define TINY_MAX 32
 #define TINY_MIN 1
 #define SMALL_MAX 1024
 #define SMALL_MIN TINY_MAX + 1
@@ -17,14 +18,14 @@
 #define IS_SMALL(x) (x > TINY_MAX && x <= SMALL_MAX)
 #define IS_LARGE(x) (x > SMALL_MAX)
 
-#define EFFECTIVE_SIZE(x) (x + sizeof(t_hdr_block) + sizeof(t_ftr_block))
-
-#define CEIL(x) ((x - (int)x) > 0.0 ? (int)x + 1 : (int)x)
+#define CEIL(x) ((x - (int)x > 0.0) ? (int)x + 1 : (int)x)
 
 #define METADATA_SIZE (sizeof(t_hdr_block) + sizeof(t_ftr_block))
-#define TINY_ZONE_SIZE  (((100 * (TINY_MIN + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)))
-#define SMALL_ZONE_SIZE (((100 * (SMALL_MIN + METADATA_SIZE)) + sizeof(t_zone) + sizeof(t_hdr_block)))
-#define LARGE_ZONE_SIZE(x) (x + sizeof(t_zone))
+#define EFFECTIVE_SIZE(x) (x + METADATA_SIZE)
+
+#define SMALL_ZONE_SIZE (uint64_t)(ceil(((100 * EFFECTIVE_SIZE(SMALL_MIN)) + sizeof(t_zone) + sizeof(t_hdr_block)) / (double)getpagesize()) * getpagesize())
+#define TINY_ZONE_SIZE  (uint64_t)(ceil(((100 * EFFECTIVE_SIZE(TINY_MIN)) + sizeof(t_zone) + sizeof(t_hdr_block)) / (double)getpagesize()) * getpagesize())
+#define LARGE_ZONE_SIZE(x) (uint64_t)(ceil((x + sizeof(t_zone)) / (double)getpagesize()) * getpagesize())
 
 #define ZONE_SIZE(type) (type == TINY_ZONE ? TINY_ZONE_SIZE : SMALL_ZONE_SIZE)
 
