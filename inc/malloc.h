@@ -3,9 +3,10 @@
 #define _MALLOC_H
 
 #include <unistd.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <sys/mman.h>
+#include <sys/resource.h>
+#include <stdint.h>
 #include <pthread.h>
 #include <math.h>
 

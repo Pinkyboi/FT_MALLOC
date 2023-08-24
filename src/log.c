@@ -37,7 +37,7 @@ static void print_hex(unsigned char *ptr, size_t size)
         if (ptr[i])
             printf("%02x ", ptr[i]);
         else
-            printf("\033[30m%02x\033[0m ", ptr[i]);
+            printf("\033[90m%02x\033[0m ", ptr[i]);
         if (i % 16 == 15 || i + 1 == size)
             printf("\n");
     }
