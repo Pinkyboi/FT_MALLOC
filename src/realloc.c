@@ -17,6 +17,9 @@ void    *ft_realloc(void *ptr, size_t size)
     old_header = NULL;
     new_block  = NULL;
     zone       = NULL;
+
+    if (size == 0)
+        return (NULL);
     if (ptr == NULL)
         return ft_malloc(size);
     if ((old_header = search_in_zone(ptr, TINY_ZONE)) || (old_header = search_in_zone(ptr, SMALL_ZONE)))

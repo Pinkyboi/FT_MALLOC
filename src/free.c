@@ -37,10 +37,15 @@ void free_block(t_hdr_block *block_hdr, t_zone_type zone_type)
 
     zone_tail = GET_ZONE_TAIL_ADDR(zone_type);
     block_hdr->is_free = true;
-    merge_memory_blocks(block_hdr, GET_NEXT_HEADER(block_hdr, block_hdr->size));
-    merge_memory_blocks(GET_PREV_HEADER(block_hdr), block_hdr);
     for (t_zone **zone_head = GET_ZONE_ADDR(zone_type); *zone_head; zone_head = &(*zone_head)->next)
     {
+        if (IS_VALID_ZONE_ADDR((*zone_head), block_hdr))
+        {
+            if (IS_VALID_ZONE_ADDR((*zone_head), GET_NEXT_HEADER(block_hdr, block_hdr->size)))
+                merge_memory_blocks(block_hdr, GET_NEXT_HEADER(block_hdr, block_hdr->size));
+            if (IS_VALID_ZONE_ADDR((*zone_head), GET_PREV_HEADER(block_hdr)))
+                merge_memory_blocks(GET_PREV_HEADER(block_hdr), block_hdr);
+        }
         if (FIRST_BLOCK_SIZE(zone_type) == GET_ZONE_FIRST_HEADER(*zone_head)->size)
         {
             if (GET_ZONE_ADDR(zone_type) == zone_head)
@@ -61,7 +66,7 @@ void ft_free(void *ptr)
 
     if (ptr == NULL)
         return ;
-    if ((block_hdr = search_in_zone(ptr, TINY_ZONE))) 
+    if ((block_hdr = search_in_zone(ptr, TINY_ZONE)))
         free_block(block_hdr, TINY_ZONE);
     else if ((block_hdr = search_in_zone(ptr, SMALL_ZONE)))
         free_block(block_hdr, SMALL_ZONE);
