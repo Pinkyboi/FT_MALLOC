@@ -1,6 +1,6 @@
 #include "malloc.h"
 
-void    *ft_reallocf(void *ptr, size_t size)
+void    *reallocf(void *ptr, size_t size)
 {
     void    *new_ptr;
 
