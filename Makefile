@@ -28,7 +28,7 @@ OBJ_NAME = $(SRC_NAME:.c=.o)
 SRC = $(addprefix $(SRC_PATH),$(SRC_NAME))
 OBJ = $(addprefix $(OBJ_PATH),$(OBJ_NAME))
 
-FLAGS = -Wall -Wextra -Werror -I $(INC_PATH)
+FLAGS = -Wall -Wextra -Werror -fPIC  -I $(INC_PATH)
 
 all: $(NAME)
 

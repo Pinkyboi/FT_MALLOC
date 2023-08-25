@@ -7,14 +7,22 @@ static void *ft_memset(void *b, int c, size_t len)
     return (b);
 }
 
-void *ft_calloc(size_t count, size_t size)
+static void *ft_calloc(size_t count, size_t size)
+{
+    void *new_block;
+
+    if ((new_block = ft_malloc(count * size)) == NULL)
+        return (NULL);
+    ft_memset(new_block, 0, count * size);
+    return (new_block);
+}
+
+void *calloc(size_t count, size_t size)
 {
     void *ptr;
 
     pthread_mutex_lock(&g_mutex);
-    if ((ptr = ft_malloc(count * size)) == NULL)
-        return (NULL);
-    ft_memset(ptr, 0, count * size);
+    ptr = ft_calloc(count, size);
     pthread_mutex_unlock(&g_mutex);
     return (ptr);
 }
