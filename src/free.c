@@ -30,7 +30,7 @@ static void free_large_block(void *ptr)
     }
 }
 
-void free_block(t_hdr_block *block_hdr, t_zone_type zone_type)
+static void free_block(t_hdr_block *block_hdr, t_zone_type zone_type)
 {
     t_zone *zone;
     t_zone **zone_tail;

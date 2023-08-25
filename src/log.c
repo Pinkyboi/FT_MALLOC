@@ -76,13 +76,16 @@ static void print_zone_infos(t_zone_type zone_type, t_bool extra_infos)
     }
     else
     {
-        block_hdr = GET_ZONE_FIRST_HEADER(chosen_zone);
-        while (IS_VALID_ZONE_ADDR(chosen_zone, block_hdr))
+        for (t_zone *zone_head = chosen_zone; zone_head; zone_head = zone_head->next)
         {
-            print_mem_info(GET_MEMORY_BLOCK(block_hdr), GET_BLOCK_FOOTER(block_hdr), block_hdr->size);
-            if (block_hdr->is_free == false && extra_infos)
-                print_hex((unsigned char *)GET_MEMORY_BLOCK(block_hdr), block_hdr->size);
-            block_hdr = GET_NEXT_HEADER(block_hdr, block_hdr->size);
+            block_hdr = GET_ZONE_FIRST_HEADER(zone_head);
+            while (IS_VALID_ZONE_ADDR(zone_head, block_hdr))
+            {
+                print_mem_info(GET_MEMORY_BLOCK(block_hdr), GET_BLOCK_FOOTER(block_hdr), block_hdr->size);
+                if (block_hdr->is_free == false && extra_infos)
+                    print_hex((unsigned char *)GET_MEMORY_BLOCK(block_hdr), block_hdr->size);
+                block_hdr = GET_NEXT_HEADER(block_hdr, block_hdr->size);
+            }
         }
     }
 }
