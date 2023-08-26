@@ -14,16 +14,26 @@ static void free_large_block(void *ptr)
     t_zone **zone_tail;
 
     zone_tail = GET_ZONE_TAIL_ADDR(LARGE_ZONE);
-    for (t_zone **zone_head = GET_ZONE_ADDR(LARGE_ZONE); *zone_head; zone_head = &(*zone_head)->next)
+    for (t_zone **curr_zone = GET_ZONE_ADDR(LARGE_ZONE); *curr_zone; curr_zone = &(*curr_zone)->next)
     {
-        if((void *)GET_L_MEMORY_BLOCK(*zone_head) == ptr)
+        if((void *)GET_L_MEMORY_BLOCK(*curr_zone) == ptr)
         {
-            if (GET_ZONE_ADDR(LARGE_ZONE) == zone_head)
-                break;
-            zone = *zone_head;
-            *zone_head =  (*zone_head)->next;
-            if (*zone_tail == zone)
-                *zone_tail = *zone_head;
+            zone = *curr_zone;
+            if (GET_ZONE_ADDR(LARGE_ZONE) == curr_zone)
+            {
+                *curr_zone = (*curr_zone)->next;
+                *zone_tail = *curr_zone;
+            }
+            else if (*zone_tail == zone)
+            {
+                *zone_tail = (*curr_zone)->prev;
+                (*zone_tail)->next = NULL;
+            }
+            else
+            {
+                (*curr_zone)->prev->next = (*curr_zone)->next;
+                zone->next->prev = zone->prev;
+            }
             munmap(zone, zone->size);
             break;
         }
@@ -37,33 +47,34 @@ static void free_block(t_hdr_block *block_hdr, t_zone_type zone_type)
 
     zone_tail = GET_ZONE_TAIL_ADDR(zone_type);
     block_hdr->is_free = true;
-    for (t_zone **zone_head = GET_ZONE_ADDR(zone_type); *zone_head; zone_head = &(*zone_head)->next)
+    for (t_zone **curr_zone = GET_ZONE_ADDR(zone_type); *curr_zone; curr_zone = &(*curr_zone)->next)
     {
-        if (IS_VALID_ZONE_ADDR((*zone_head), block_hdr))
+        if (IS_VALID_ZONE_ADDR((*curr_zone), block_hdr))
         {
-            if (IS_VALID_ZONE_ADDR((*zone_head), GET_NEXT_HEADER(block_hdr, block_hdr->size)))
+            if (IS_VALID_ZONE_ADDR((*curr_zone), GET_NEXT_HEADER(block_hdr, block_hdr->size)))
                 merge_memory_blocks(block_hdr, GET_NEXT_HEADER(block_hdr, block_hdr->size));
-            if (IS_VALID_ZONE_ADDR((*zone_head), GET_PREV_HEADER(block_hdr)))
+            if (IS_VALID_ZONE_ADDR((*curr_zone), GET_PREV_HEADER(block_hdr)))
                 merge_memory_blocks(GET_PREV_HEADER(block_hdr), block_hdr);
         }
-        if (FIRST_BLOCK_SIZE(zone_type) == GET_ZONE_FIRST_HEADER(*zone_head)->size)
+        if (FIRST_BLOCK_SIZE(zone_type) == GET_ZONE_FIRST_HEADER(*curr_zone)->size)
         {
-            zone = *zone_head;
-            if (GET_ZONE_ADDR(zone_type) == zone_head)
+            zone = *curr_zone;
+            if (GET_ZONE_ADDR(zone_type) == curr_zone)
             {
                 if (zone->next == NULL)
                     break;
-                *zone_head = (*zone_head)->next;
+                *curr_zone = (*curr_zone)->next;
+                *zone_tail = *curr_zone;
             }
             else if (*zone_tail == zone)
             {
-                *zone_tail = (*zone_head)->prev;
-                (*zone_head)->prev->next = NULL;
+                *zone_tail = (*curr_zone)->prev;
+                (*curr_zone)->prev->next = NULL;
             }
             else
             {
-                (*zone_head)->prev->next = (*zone_head)->next;
-                (*zone_head)->next->prev = (*zone_head)->prev;
+                (*curr_zone)->prev->next = (*curr_zone)->next;
+                zone->next->prev = zone->prev;
             }
             munmap(zone, zone->size);
             break;
