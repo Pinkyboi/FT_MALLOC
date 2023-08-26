@@ -48,12 +48,23 @@ static void free_block(t_hdr_block *block_hdr, t_zone_type zone_type)
         }
         if (FIRST_BLOCK_SIZE(zone_type) == GET_ZONE_FIRST_HEADER(*zone_head)->size)
         {
-            if (GET_ZONE_ADDR(zone_type) == zone_head)
-                break;
             zone = *zone_head;
-            *zone_head =  (*zone_head)->next;
-            if (*zone_tail == zone)
-                *zone_tail = *zone_head;
+            if (GET_ZONE_ADDR(zone_type) == zone_head)
+            {
+                if (zone->next == NULL)
+                    break;
+                *zone_head = (*zone_head)->next;
+            }
+            else if (*zone_tail == zone)
+            {
+                *zone_tail = (*zone_head)->prev;
+                (*zone_head)->prev->next = NULL;
+            }
+            else
+            {
+                (*zone_head)->prev->next = (*zone_head)->next;
+                (*zone_head)->next->prev = (*zone_head)->prev;
+            }
             munmap(zone, zone->size);
             break;
         }

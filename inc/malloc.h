@@ -101,6 +101,7 @@ typedef struct      s_zone
 {
     size_t          size;     // pointer to the end of the zone
     struct s_zone   *next;      // pointer to the next zone
+    struct s_zone   *prev;      // pointer to the previous zone
 }                   t_zone;
 
 // structure containing the different zones

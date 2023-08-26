@@ -6,6 +6,7 @@ pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 static t_bool alloc_memory_page(t_zone **zone, t_zone **zone_tail, size_t size)
 {
     t_zone *mapped_memory;
+    t_zone *zone_tail_ptr;
 
     mapped_memory = (t_zone *)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
     if (mapped_memory == MAP_FAILED)
@@ -20,7 +21,9 @@ static t_bool alloc_memory_page(t_zone **zone, t_zone **zone_tail, size_t size)
     else
     {
         (*zone_tail)->next = mapped_memory;
+        zone_tail_ptr = *zone_tail;
         *zone_tail = mapped_memory;
+        (*zone_tail)->prev = zone_tail_ptr;
     }
     return (true);
 }
