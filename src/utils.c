@@ -2,10 +2,7 @@
 
 inline size_t  get_alligned_size(size_t size)
 {
-    size_t alligned_size;
-
-    alligned_size = ALLIGN(size);
-    return (alligned_size - size >= sizeof(t_ftr_block) ? alligned_size : alligned_size + sizeof(t_ftr_block) );
+    return (ALLIGN(size) + sizeof(t_ftr_block));
 }
 
 void set_block_metadata(t_hdr_block *memory_block, t_bool is_free, size_t size)
@@ -39,4 +36,15 @@ t_zone *search_in_large_zone(void *ptr)
         if((void *)GET_L_MEMORY_BLOCK(zone_head) == ptr)
             return (zone_head);
     return (NULL);
+}
+
+t_bool is_allocated(void *ptr)
+{
+    t_hdr_block *block;
+
+    if ((block = search_in_zone(ptr, TINY_ZONE)) || (block = search_in_zone(ptr, SMALL_ZONE)))
+        return (block->is_free == false);
+    if (search_in_large_zone(ptr))
+        return (true);
+    return (false);
 }

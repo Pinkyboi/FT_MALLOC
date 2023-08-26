@@ -133,10 +133,10 @@ void            show_alloc_mem();
 void            show_alloc_mem_ex();
 
 void            set_block_metadata(t_hdr_block *memory_block, t_bool is_free, size_t size);
+t_bool          is_allocated(void *ptr);
 size_t          get_alligned_size(size_t size);
 t_hdr_block*    search_in_zone(void *ptr, t_zone_type zone_type);
 t_zone*         search_in_large_zone(void *ptr);
-
 
 void print_base(long long number, unsigned short base);
 #endif
