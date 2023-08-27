@@ -7,7 +7,7 @@ inline size_t  get_alligned_size(size_t size)
 
 void set_block_metadata(t_hdr_block *memory_block, t_bool is_free, size_t size)
 {
-    *memory_block = (t_hdr_block){is_free, size};
+    *memory_block = (t_hdr_block){.is_free = is_free, .size = size};
     *GET_BLOCK_FOOTER(memory_block) = size;
 }
 

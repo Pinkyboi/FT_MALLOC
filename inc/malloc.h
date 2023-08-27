@@ -87,12 +87,12 @@ typedef struct      s_hdr_block
     uint16_t        size: 15;   // size of the block
 }                   t_hdr_block;
 #else
-typedef uint32_t    t_ftr_block;
+typedef uint64_t    t_ftr_block;
 
 typedef struct      s_hdr_block
 {
-    uint32_t        is_free: 1;    // is the block free
-    uint32_t        size: 31;   // size of the block
+    uint64_t        is_free: 1;    // is the block free
+    uint64_t        size: 63;   // size of the block
 }                   t_hdr_block;
 #endif
 
@@ -102,6 +102,7 @@ typedef struct      s_zone
     size_t          size;     // pointer to the end of the zone
     struct s_zone   *next;      // pointer to the next zone
     struct s_zone   *prev;      // pointer to the previous zone
+    uint64_t        padding; // padding
 }                   t_zone;
 
 // structure containing the different zones
